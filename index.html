@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detona a Pinhata!</title>
+<style>
+  :root{
+    --paper: #FFF7E8;
+    --ink: #2B1B12;
+    --pink: #E84A7A;
+    --pink-dark: #C22F5C;
+    --yellow: #FFC93C;
+    --teal: #2FB8A6;
+    --purple: #7B4FD1;
+    --orange: #FF7A3D;
+    --card: #FFFFFF;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(255,201,60,0.35), transparent 40%),
+      radial-gradient(circle at 85% 20%, rgba(123,79,209,0.25), transparent 40%),
+      radial-gradient(circle at 50% 90%, rgba(47,184,166,0.25), transparent 45%),
+      var(--paper);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 60px;
+    overflow-x: hidden;
+  }
+
+  .title {
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    margin: 6px 0 2px;
+    text-align: center;
+    color: var(--pink-dark);
+    text-shadow: 3px 3px 0 var(--yellow);
+  }
+
+  .subtitle {
+    text-align: center;
+    max-width: 480px;
+    margin: 0 0 20px;
+    color: #6b4a38;
+    font-size: 0.98rem;
+  }
+
+  .stage {
+    position: relative;
+    width: min(94vw, 480px);
+    background: var(--card);
+    border-radius: 28px;
+    padding: 26px 20px 22px;
+    box-shadow: 0 18px 0 rgba(0,0,0,0.06), 0 24px 40px rgba(0,0,0,0.12);
+    border: 4px solid var(--ink);
+  }
+
+  .hp-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .hp-label {
+    font-weight: 800;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    color: var(--pink-dark);
+  }
+
+  .hp-bar {
+    flex: 1;
+    height: 20px;
+    background: #f0e2cf;
+    border-radius: 999px;
+    border: 3px solid var(--ink);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .hp-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, var(--teal), #6bd6c8);
+    transition: width 0.25s ease;
+    border-radius: 999px 0 0 999px;
+  }
+
+  .hp-fill.low { background: linear-gradient(90deg, var(--orange), var(--pink)); }
+
+  .score-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #8a6a52;
+    margin-bottom: 10px;
+  }
+
+  .pinata-zone {
+    position: relative;
+    height: clamp(260px, 42vw, 340px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    user-select: none;
+  }
+
+  .rope {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 34px;
+    background: #b89a7a;
+  }
+
+  .pinata {
+    position: relative;
+    width: clamp(180px, 30vw, 230px);
+    height: clamp(180px, 30vw, 230px);
+    cursor: pointer;
+    transform-origin: top center;
+    animation: sway 2.6s ease-in-out infinite;
+    transition: transform 0.05s;
+  }
+
+  .pinata.disabled { cursor: default; }
+
+  @keyframes sway {
+    0%, 100% { transform: rotate(-4deg); }
+    50% { transform: rotate(4deg); }
+  }
+
+  .pinata.hit { animation: none; }
+
+  .pinata-body {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 6px solid var(--ink);
+    box-shadow: inset 0 -12px 0 rgba(0,0,0,0.08);
+    background: repeating-conic-gradient(
+      var(--pink) 0deg 20deg,
+      var(--yellow) 20deg 40deg,
+      var(--teal) 40deg 60deg,
+      var(--purple) 60deg 80deg
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pinata-body img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .pinata-body .default-face {
+    font-size: 5rem;
+  }
+
+  .weapon-strike {
+    position: absolute;
+    font-size: 3.2rem;
+    pointer-events: none;
+    z-index: 8;
+    transform-origin: 85% 15%;
+    opacity: 0;
+  }
+
+  .weapon-strike.swing {
+    animation: strike 0.28s ease-out forwards;
+  }
+
+  @keyframes strike {
+    0%   { transform: rotate(60deg) translate(40px, -40px) scale(0.9); opacity: 0; }
+    35%  { opacity: 1; }
+    55%  { transform: rotate(-25deg) translate(0px, 0px) scale(1.1); opacity: 1; }
+    100% { transform: rotate(-25deg) translate(-6px, 4px) scale(1.05); opacity: 0; }
+  }
+
+  .impact-emoji {
+    position: absolute;
+    font-size: 2.6rem;
+    pointer-events: none;
+    animation: pop 0.5s ease-out forwards;
+    z-index: 5;
+  }
+
+  @keyframes pop {
+    0% { transform: scale(0.3) translateY(0); opacity: 1; }
+    60% { transform: scale(1.3) translateY(-20px); opacity: 1; }
+    100% { transform: scale(1) translateY(-50px); opacity: 0; }
+  }
+
+  .floating-dmg {
+    position: absolute;
+    font-weight: 900;
+    font-size: 1.4rem;
+    color: var(--pink-dark);
+    pointer-events: none;
+    animation: floatUp 0.7s ease-out forwards;
+    text-shadow: 2px 2px 0 #fff;
+    z-index: 6;
+  }
+
+  @keyframes floatUp {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(-60px); opacity: 0; }
+  }
+
+  .inventory-label {
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: var(--pink-dark);
+    margin: 14px 0 8px;
+    text-align: center;
+  }
+
+  .inventory {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+
+  .item {
+    background: #fff;
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    padding: 8px 2px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 var(--ink);
+    transition: transform 0.08s;
+  }
+
+  .item:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+
+  .item.selected {
+    background: var(--yellow);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 var(--pink-dark);
+  }
+
+  .item .emoji { font-size: 1.5rem; }
+  .item .dmg { font-size: 0.65rem; font-weight: 700; color: #8a6a52; }
+
+  .reset-btn {
+    margin-top: 18px;
+    background: var(--purple);
+    color: white;
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    padding: 10px 22px;
+    font-weight: 800;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 0 5px 0 var(--ink);
+  }
+  .reset-btn:active { box-shadow: 0 1px 0 var(--ink); transform: translateY(4px); }
+
+  .win-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(43,27,18,0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 20px;
+  }
+  .win-overlay.show { display: flex; }
+
+  .win-card {
+    background: var(--card);
+    border: 5px solid var(--ink);
+    border-radius: 24px;
+    padding: 30px 26px;
+    text-align: center;
+    max-width: 340px;
+    box-shadow: 0 20px 0 rgba(0,0,0,0.1);
+  }
+
+  .win-card h2 {
+    font-size: 1.8rem;
+    color: var(--pink-dark);
+    margin: 4px 0 6px;
+  }
+
+  .win-card p { color: #6b4a38; margin: 0 0 18px; }
+
+  .confetti {
+    position: fixed;
+    top: -20px;
+    width: 10px;
+    height: 14px;
+    z-index: 60;
+    pointer-events: none;
+    animation: fall linear forwards;
+  }
+
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(600deg); opacity: 0.9; }
+  }
+
+  @media (max-width: 380px) {
+    .inventory { grid-template-columns: repeat(5, 1fr); gap: 5px; }
+    .item .emoji { font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+  <h1 class="title">🎉 Detona a Pinhata!</h1>
+  <p class="subtitle">Escolhe uma arma, sobe a foto de quem você quiser e vai na porrada até estourar!</p>
+
+  <div class="stage">
+    <div class="hp-wrap">
+      <span class="hp-label">VIDA</span>
+      <div class="hp-bar"><div class="hp-fill" id="hpFill"></div></div>
+    </div>
+    <div class="score-row">
+      <span id="hitCount">Golpes: 0</span>
+      <span id="hpText">100 / 100</span>
+    </div>
+
+    <div class="pinata-zone">
+      <div class="rope"></div>
+      <div class="pinata" id="pinata">
+        <div class="pinata-body" id="pinataBody">
+          <!-- 👇 PARA TROCAR A IMAGEM DA PINHATA:
+               Troque a linha abaixo por:
+               <img src="CAMINHO_OU_URL_DA_SUA_IMAGEM.jpg" alt="pinhata">
+               Pode ser um link (https://...) ou um arquivo na mesma pasta deste HTML (ex: "minha-foto.jpg") -->
+          
+          <img class="default-face" src="./WhatsApp Image 2026-09-01 at 15.53.32.jpeg" alt="">
+        </div>
+        <span class="weapon-strike" id="weaponStrike"></span>
+      </div>
+    </div>
+
+    <div class="inventory-label">Escolha sua arma</div>
+    <div class="inventory" id="inventory"></div>
+
+    <div style="text-align:center;">
+      <button class="reset-btn" id="resetBtn">🔄 Nova Pinhata</button>
+    </div>
+  </div>
+
+  <div class="win-overlay" id="winOverlay">
+    <div class="win-card">
+      <div style="font-size:3rem;">🎊</div>
+      <h2>ESTOUROU!</h2>
+      <p id="winText">Você quebrou a pinhata em 0 golpes!</p>
+      <button class="reset-btn" id="playAgainBtn">Jogar de novo</button>
+    </div>
+  </div>
+
+<script>
+  const items = [
+    { emoji: '🏏', name: 'Taco', dmg: 12 },
+    { emoji: '🔨', name: 'Martelo', dmg: 18 },
+    { emoji: '🍳', name: 'Frigideira', dmg: 15 },
+    { emoji: '🩴', name: 'Chinelo', dmg: 8 },
+    { emoji: '👊', name: 'Soco', dmg: 6 },
+  ];
+
+  let selectedItem = items[0];
+  let hp = 100;
+  const maxHp = 100;
+  let hits = 0;
+  let broken = false;
+
+  const inventoryEl = document.getElementById('inventory');
+  const pinataEl = document.getElementById('pinata');
+  const pinataBody = document.getElementById('pinataBody');
+  const weaponStrike = document.getElementById('weaponStrike');
+  const hpFill = document.getElementById('hpFill');
+  const hpText = document.getElementById('hpText');
+  const hitCount = document.getElementById('hitCount');
+  const resetBtn = document.getElementById('resetBtn');
+  const winOverlay = document.getElementById('winOverlay');
+  const winText = document.getElementById('winText');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+
+  function renderInventory() {
+    inventoryEl.innerHTML = '';
+    items.forEach((item, i) => {
+      const div = document.createElement('div');
+      div.className = 'item' + (item === selectedItem ? ' selected' : '');
+      div.innerHTML = `<span class="emoji">${item.emoji}</span><span class="dmg">${item.name}</span>`;
+      div.addEventListener('click', () => {
+        selectedItem = item;
+        renderInventory();
+      });
+      inventoryEl.appendChild(div);
+    });
+  }
+
+  function updateHp() {
+    const pct = Math.max(0, (hp / maxHp) * 100);
+    hpFill.style.width = pct + '%';
+    hpFill.classList.toggle('low', pct < 30);
+    hpText.textContent = `${Math.max(0, hp)} / ${maxHp}`;
+    hitCount.textContent = `Golpes: ${hits}`;
+  }
+
+  function spawnImpact(emoji) {
+    const rect = pinataEl.getBoundingClientRect();
+    const stageRect = pinataEl.parentElement.getBoundingClientRect();
+    const x = rect.left - stageRect.left + rect.width / 2 + (Math.random() * 60 - 30);
+    const y = rect.top - stageRect.top + rect.height / 2 + (Math.random() * 40 - 20);
+
+    const el = document.createElement('div');
+    el.className = 'impact-emoji';
+    el.textContent = emoji;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    pinataEl.parentElement.appendChild(el);
+    setTimeout(() => el.remove(), 500);
+
+    const dmgEl = document.createElement('div');
+    dmgEl.className = 'floating-dmg';
+    dmgEl.textContent = '-' + selectedItem.dmg;
+    dmgEl.style.left = (x + 20) + 'px';
+    dmgEl.style.top = (y - 10) + 'px';
+    pinataEl.parentElement.appendChild(dmgEl);
+    setTimeout(() => dmgEl.remove(), 700);
+  }
+
+  function swingWeapon() {
+    weaponStrike.textContent = selectedItem.emoji;
+    weaponStrike.classList.remove('swing');
+    // força reflow pra reiniciar a animação
+    void weaponStrike.offsetWidth;
+    weaponStrike.classList.add('swing');
+  }
+
+  function shakePinata() {
+    pinataEl.classList.add('hit');
+    pinataEl.style.transform = 'rotate(0deg) scale(0.94)';
+    setTimeout(() => {
+      pinataEl.style.transform = '';
+      pinataEl.classList.remove('hit');
+    }, 140);
+  }
+
+  function launchConfetti() {
+    const colors = ['#E84A7A', '#FFC93C', '#2FB8A6', '#7B4FD1', '#FF7A3D'];
+    for (let i = 0; i < 80; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = (2 + Math.random() * 2) + 's';
+      c.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 4200);
+    }
+  }
+
+  function hitPinata() {
+    if (broken) return;
+    hits++;
+    hp -= selectedItem.dmg;
+    updateHp();
+    swingWeapon();
+    shakePinata();
+    spawnImpact(['💥','⭐','✨','💫'][Math.floor(Math.random()*4)]);
+
+    if (hp <= 0) {
+      hp = 0;
+      updateHp();
+      broken = true;
+      pinataEl.classList.add('disabled');
+      setTimeout(() => {
+        launchConfetti();
+        winText.textContent = `Você quebrou a pinhata em ${hits} golpes!`;
+        winOverlay.classList.add('show');
+      }, 200);
+    }
+  }
+
+  function resetGame() {
+    hp = 100;
+    hits = 0;
+    broken = false;
+    pinataEl.classList.remove('disabled');
+    winOverlay.classList.remove('show');
+    updateHp();
+  }
+
+  pinataEl.addEventListener('click', hitPinata);
+  resetBtn.addEventListener('click', resetGame);
+  playAgainBtn.addEventListener('click', resetGame);
+
+  renderInventory();
+  updateHp();
+</script>
+</body>
+</html>
